@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 project(cliruntime LANGUAGES CXX)
 
-set(PROJECT_VERSION "0.1.0")
+set(PROJECT_VERSION "0.2.0")
 
 # --- Для сборщика ---
 
