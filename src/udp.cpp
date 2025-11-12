@@ -2,16 +2,6 @@
 
 using namespace std;
 
-Command Raw_ReqParser::dataToCommand(void* data, int len)
-{
-
-}
-
-void* Raw_ReqParser::commandToData(Command command, int &len)
-{
-
-}
-
 UDPSocket::UDPSocket()
 {
     descriptor = socket(AF_INET, SOCK_DGRAM, 0);
@@ -58,6 +48,10 @@ ssize_t UDPSocket::sendTo(const void* buffer, size_t length, const std::string& 
     if (inet_pton(AF_INET, address.c_str(), &addr.sin_addr) <= 0)
     {
         //clir_log("Wrong address during sending");
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+            return -1; // Timeout occurred
+        }
         throw std::system_error(errno, std::system_category(), "Wrong address during sending");
     }
 
@@ -78,7 +72,10 @@ ssize_t UDPSocket::receiveFrom(void* buffer, size_t length, std::string& address
     ssize_t received = recvfrom(descriptor, buffer, length, 0, reinterpret_cast<sockaddr *>(&addr), &addr_len);
     if (received < 0)
     {
-        //clir_log("Couldn't read data during receiving");
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+            return -1; // Timeout occurred
+        }
         throw std::system_error(errno, std::system_category(), "Couldn't read data during receiving");
     }
 
@@ -117,5 +114,21 @@ void UDPSocket::setBlocking(bool enable)
     {
         //clir_log("Couldn't set net flags");
         throw std::system_error(errno, std::system_category(), "Couldn't set net flags");
+    }
+}
+
+void UDPSocket::setTimeout(int seconds)
+{
+    timeval timeout{};
+    timeout.tv_sec = seconds;
+
+    if (setsockopt(descriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0)
+    {
+        throw std::system_error(errno, std::system_category(), "Couldn't set UDP receiving timeout");
+    }
+
+    if (setsockopt(descriptor, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0)
+    {
+        throw std::system_error(errno, std::system_category(), "Couldn't set UDP sending timeout");
     }
 }

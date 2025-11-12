@@ -22,20 +22,6 @@ enum Command
     DIR_LIST
 };
 
-class ReqParser
-{
-    public:
-        virtual Command dataToCommand(void* data, int len) = 0;
-        virtual void* commandToData(Command command, int &len) = 0;
-};
-
-class Raw_ReqParser : public ReqParser
-{
-    public:
-        Command dataToCommand(void* data, int len) override;
-        void* commandToData(Command command, int &len) override;
-};
-
 class UDPSocket
 {
     public:
@@ -45,6 +31,7 @@ class UDPSocket
         ssize_t receiveFrom(void* buffer, size_t length, std::string& address, uint16_t& port);
         void setReuseAddress(bool enable);
         void setBlocking(bool enable);
+        void setTimeout(int seconds);
         ~UDPSocket();
     
     protected:

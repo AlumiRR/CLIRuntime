@@ -9,7 +9,11 @@
 using namespace daemonpp;
 using namespace std::chrono_literals;
 
-class CLIDaemon : public daemon
+using namespace std;
+
+#define TIMEOUT 3s
+
+class CLIDaemon : public daemon //Линковщик жалуется если не здесь :(
 {
     public:
         void on_start(const dconfig &cfg) override
@@ -17,19 +21,34 @@ class CLIDaemon : public daemon
             dlog::info("CLIDaemon version: " + cfg.get("version") + " started");
 
             dlog::info("Starting UDP server...");
-            socket.setReuseAddress(true);
-            socket.bind("0.0.0.0", PORT);
+            try
+            {
+                socket.setReuseAddress(true);
+                socket.bind("0.0.0.0", PORT);
+                socket.setTimeout(3);
+            }
+            catch(const std::exception& e)
+            {
+                dlog::critical("Couldn't set up UDP socket: " + string(e.what()));
+                dlog::info("Terminating...");
+                exit(EXIT_FAILURE);
+            }
+        
             dlog::info("UDP server started");
         };
         void on_update() override
         {
             dlog::info("Checking for UDP requests");
 
-            std::string source_addr;
+            string source_addr;
             uint16_t source_port;
             char buffer[1024];
             ssize_t received = socket.receiveFrom(buffer, sizeof(buffer), source_addr, source_port);
-            dlog::info("Received: " + std::string(buffer));
+            
+            dlog::info("Received: " + string(buffer));
+
+            const string response = "Done";
+            socket.sendTo(response.data(), response.size(), source_addr, source_port);
         };
         void on_stop() override
         {
@@ -49,8 +68,6 @@ class CLIDaemon : public daemon
     private:
         UDPSocket socket;
 };
-
-using namespace std;
 
 void remove_quotations(string &str)
 {
@@ -86,12 +103,31 @@ int main(int argc, const char *argv[])
                 return EXIT_FAILURE;
             }
 
+            for (int j = i + 2; j < argc; j++)
+            {
+                string str = (string)argv[j];
+                if (str.front() == '-')
+                    break;
+                command_string += " " + str;
+                if (str.back() == '\"')
+                    break;
+            }
+
             //cout << "CLIRuntime " << command_string << endl;
             //return EXIT_FAILURE;
         }
         else if (strstr(argv[i], "--cmd=") != NULL) // TODO Заменить на более строгую проверку
         {
             command_string = (string)argv[i];
+            for(int j = i + 1; j < argc; j++)
+            {
+                string str = (string)argv[j];
+                if(str.front() == '-')
+                    break;
+                command_string += " " + str;
+                if(str.back() == '\"')
+                    break;
+            }
 
             command_string.replace(0, 6, "");
             if (command_string.length() < 1)
@@ -106,17 +142,38 @@ int main(int argc, const char *argv[])
     
     remove_quotations(command_string);
 
+    UDPSocket client;
+
+    client.setTimeout(3);
+
     if (command_string.length() > 0)
     {
-        UDPSocket client;
+        cout << "<< " << command_string << endl;
         client.sendTo(command_string.data(), command_string.size(), LOCALHOST, PORT);
+
+        string server_addr;
+        uint16_t server_port;
+        char buffer[1024];
+        ssize_t received = client.receiveFrom(buffer, sizeof(buffer), server_addr, server_port);
+
+        if (received >= 0)
+        {
+            cout << ">> " << string(buffer) << endl;
+        }
+        else
+        {
+            cout << "!< " << "No response" << endl;
+            cerr << "Couldn't reach server" << endl;
+            return EXIT_FAILURE;
+        }
+        
         return EXIT_SUCCESS;
     }
 
     cout << "Starting CLIDaemon" << endl;
     CLIDaemon dmn;                             // create a daemon instance
     dmn.set_name("CLIDaemon");     // set daemon name to identify logs in syslog
-    dmn.set_update_duration(3s); // set duration to sleep before triggering the on_update callback 3 seconds
+    dmn.set_update_duration(10ms); // set duration to sleep before triggering the on_update callback 3 seconds
     dmn.set_cwd("/");                        // set daemon's current working directory to root /
     dmn.run(argc, argv);                 // run your daemon
 
