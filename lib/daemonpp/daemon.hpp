@@ -62,7 +62,10 @@ namespace daemonpp {
             if(!std::strcmp(argv[i], "--config"))
             {
               if(i + 1 < argc)
+                {
                   m_config_file = argv[i + 1];
+                  dlog::info("Loading config from" + m_config_file);
+                }
               else
                   dlog::error("Missing config file. Did you forget to specify a config file in your .service file's ExecStart ?");
               break;

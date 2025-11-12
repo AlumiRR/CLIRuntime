@@ -16,12 +16,6 @@
 #define MAXLINE 1024
 #define LOCALHOST "127.0.0.1"
 
-enum Command
-{
-    STOP,
-    DIR_LIST
-};
-
 class UDPSocket
 {
     public:
