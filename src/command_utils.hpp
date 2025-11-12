@@ -4,7 +4,7 @@
 
 using namespace std;
 
-namespace cliutils
+namespace cliutils // Нет смысла объединять это все в объект
 {
     enum Command
     {
