@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 project(cliruntime DESCRIPTION "Простой daemon для Linux, общающийся с клиентом по UDP" LANGUAGES CXX)
 
-set(PROJECT_VERSION "0.4.2")
+set(PROJECT_VERSION "0.4.3")
 
 # --- Для сборщика ---
 

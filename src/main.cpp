@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <thread>
+#include <atomic>
 
 #include "daemon.hpp"
 
@@ -48,6 +50,8 @@ class CLIDaemon : public daemon // Линковщик жалуется если 
             }
         
             dlog::info("UDP server started on port " + to_string(port));
+
+            atomic_task_ptr = make_unique<thread>(([&](){ periodicTasks(); }));
         };
         void on_update() override
         {
@@ -62,58 +66,72 @@ class CLIDaemon : public daemon // Линковщик жалуется если 
             char buffer[1024];
             ssize_t received = socket.receiveFrom(buffer, sizeof(buffer), source_addr, source_port);
 
-            // --- Парсим сообщение-комманду ---
-
-            cliutils::Command cmd;
-            cmd = cliutils::parseString(string(buffer));
-
-            dlog::info("Recieved command: " + string(buffer) + " (" + cliutils::explainCommand(cmd) + ")");
-
-            // --- Исполняем комманду ---
-            string response;
-            try
+            if (received >= 0)
             {
-                response = cliutils::executeCommand(cmd, cliutils::eraseFirstWord(string(buffer)));
+                // --- Парсим сообщение-комманду ---
+
+                cliutils::Command cmd;
+                cmd = cliutils::parseString(string(buffer));
+
+                dlog::info("Recieved command: " + string(buffer) + " (" + cliutils::explainCommand(cmd) + ")");
+
+                // --- Исполняем комманду ---
+                string response;
+                try
+                {
+                    response = cliutils::executeCommand(cmd, cliutils::eraseFirstWord(string(buffer)));
+                }
+                catch (const std::exception &e)
+                {
+                    response = e.what();
+                }
+
+                // --- Отправляем ответ ---
+
+                socket.setTimeout(3);
+                socket.sendTo(response.data(), response.size(), source_addr, source_port);
+
+                // --- Останавливаем сервис если такова комманда ---
+
+                if (cmd == cliutils::STOP)
+                {
+                    stop(EXIT_SUCCESS);
+                }
             }
-            catch(const std::exception& e)
-            {
-                response = e.what();
-            }
 
-            // --- Отправляем ответ ---
-
-            socket.setTimeout(3);
-            socket.sendTo(response.data(), response.size(), source_addr, source_port);
-
-            // --- Останавливаем сервис если такова комманда ---
-
-            if (cmd == cliutils::STOP)
-            {
-                stop(EXIT_SUCCESS);
-            }
         };
         void on_stop() override
         {
             dlog::info("Terminating...");
+            stop_periodic_task = true;
+            atomic_task_ptr->join();
         };
         void on_reload(const dconfig &cfg) override
         {
             dlog::info("my_daemon::on_reload(): new daemon version from updated config: " + cfg.get("version"));
         };
 
+        void periodicTasks()
+        {
+            while (!stop_periodic_task)
+            {
+                this_thread::sleep_for(periodic_task_time);
+                // --- Выполнять каждые ... единиц времени ---
+
+                dlog::info("System uptime: " + to_string(cliutils::getUptime()));
+
+            }
+            
+        }
+
     private:
         UDPSocket socket;
         uint16_t port;
-};
 
-void remove_quotations(string &str)
-{
-    if (str.front() == '\"' && str.back() == '\"')
-    {
-        str.erase(0);
-        str.pop_back();
-    }
-}
+        std::atomic<bool> stop_periodic_task{false}; // Для лога аптаймов
+        const chrono::seconds periodic_task_time = 30s;
+        unique_ptr<thread> atomic_task_ptr;
+};
 
 int main(int argc, const char *argv[])
 {
@@ -192,7 +210,7 @@ int main(int argc, const char *argv[])
         }
     }
     
-    remove_quotations(command_string);
+    cliutils::remove_quotations(command_string);
 
     // --- Обмен сообщениями между сервером и клиентом ---
 

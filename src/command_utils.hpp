@@ -36,6 +36,15 @@ namespace cliutils // Нет смысла объединять это все в 
         return "";
     };
 
+    void remove_quotations(string &str)
+    {
+        if (str.front() == '\"' && str.back() == '\"')
+        {
+            str.erase(0);
+            str.pop_back();
+        }
+    }
+
     string listDir(string path)
     {
         string listing;
@@ -52,6 +61,21 @@ namespace cliutils // Нет смысла объединять это все в 
         }
 
         return listing;
+    };
+
+    double getUptime()
+    {
+        std::ifstream uptime_file("/proc/uptime");
+        if (!uptime_file.is_open())
+        {
+            throw runtime_error("Couldn't open /proc/uptime");
+            return -1.0;
+        }
+
+        double uptimeSeconds;
+        uptime_file >> uptimeSeconds;
+        uptime_file.close();
+        return uptimeSeconds;
     };
 
     Command parseCorruptedString(const string str)
