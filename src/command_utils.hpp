@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <sstream>
+#include <filesystem>
 
 using namespace std;
 
@@ -14,33 +16,78 @@ namespace cliutils // Нет смысла объединять это все в 
         UNKNOWN
     };
 
+    string eraseFirstWord(string str)
+    {
+        string delimiter = " ";
+        str = str.erase(0, str.find(delimiter) + delimiter.length());
+        return str;
+    };
+
+    string eraseEverythingExceptFirstWord(const string str)
+    {
+        istringstream iss(str);
+        string firstWord;
+
+        if (iss >> firstWord)
+        {
+            return firstWord;
+        }
+
+        return "";
+    };
+
+    string listDir(string path)
+    {
+        string listing;
+        try
+        {
+            for (const auto &entry : filesystem::directory_iterator(path))
+            {
+                listing += string(entry.path().extension()) + " " + string(entry.path().filename()) + "\n";
+            }
+        }
+        catch (const filesystem::filesystem_error& e)
+        {
+            return e.what();
+        }
+
+        return listing;
+    };
+
     Command parseCorruptedString(const string str)
     {
         if (str.find("stop") == 0)
-        {
             return STOP;
-        }
+        else if (str.find("listen") || str.find("list") || str.find("ls") || str.find("dir"))
+            return DIR;
         return UNKNOWN;
     };
 
-    Command parseString(const string str)
+    Command parseString(string str)
     {
+        str = eraseEverythingExceptFirstWord(str);
         if (str == "stop")
         {
             return STOP;
+        }
+        else if (str == "listen" || str == "list" || str == "ls" || str == "dir")
+        {
+            return DIR;
         }
         return parseCorruptedString(str);
     };
 
     string executeCommand(Command comm, string arg = "") 
     {
-
+        arg = eraseEverythingExceptFirstWord(arg);
         switch (comm)
         {
         case STOP:
             return "Terminating..."; // exit() вне этой функции чтобы успеть отправить ответ
             break;
-        
+        case DIR:
+            return listDir(arg);
+            break;
         default:
             return "Error: Unknown command";
             break;
@@ -59,12 +106,5 @@ namespace cliutils // Нет смысла объединять это все в 
             return "unknown command";
             break;
         }
-    };
-
-    string eraseFirstWord(string str)
-    {
-        string delimiter = " ";
-        str = str.erase(0, str.find(delimiter) + delimiter.length());
-        return str;
     };
 }

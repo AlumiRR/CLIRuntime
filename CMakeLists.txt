@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 project(cliruntime DESCRIPTION "Простой daemon для Linux, общающийся с клиентом по UDP" LANGUAGES CXX)
 
-set(PROJECT_VERSION "0.4.1")
+set(PROJECT_VERSION "0.4.2")
 
 # --- Для сборщика ---
 
@@ -37,14 +37,10 @@ target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 # --- Для установки сервиса ---
 
 # Configure .service file
-if(NOT EXISTS ${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}.service)
 configure_file(${CMAKE_SOURCE_DIR}/bin/systemd/daemonpp.service.in ${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}.service)
-endif()
 
 # Configure .conf file
-if(NOT EXISTS ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.conf)
 configure_file(${CMAKE_SOURCE_DIR}/bin/systemd/daemonpp.conf.in ${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}.conf)
-endif()
 
 # Install the config file .conf
 install(FILES ${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}.conf DESTINATION /etc/${PROJECT_NAME}/)

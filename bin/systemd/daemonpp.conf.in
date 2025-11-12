@@ -2,4 +2,4 @@
 name=@PROJECT_NAME@
 version=@PROJECT_VERSION@
 description=@PROJECT_DESCRIPTION@
-port=8089
+port=7070

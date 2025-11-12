@@ -27,7 +27,7 @@ class CLIDaemon : public daemon // Линковщик жалуется если 
                 socket.setReuseAddress(true);
 
                 string port_str = cfg.get("port");
-                dlog::info("Port in conf: " + port_str); // Не работает
+                dlog::info("Port in conf: " + port_str);
 
                 if (port_str.length() > 0)
                 {
@@ -70,8 +70,15 @@ class CLIDaemon : public daemon // Линковщик жалуется если 
             dlog::info("Recieved command: " + string(buffer) + " (" + cliutils::explainCommand(cmd) + ")");
 
             // --- Исполняем комманду ---
-
-            string response = cliutils::executeCommand(cmd, cliutils::eraseFirstWord(string(buffer)));
+            string response;
+            try
+            {
+                response = cliutils::executeCommand(cmd, cliutils::eraseFirstWord(string(buffer)));
+            }
+            catch(const std::exception& e)
+            {
+                response = e.what();
+            }
 
             // --- Отправляем ответ ---
 
@@ -225,13 +232,20 @@ int main(int argc, const char *argv[])
 
     // --- Запуск сервиса ---
 
-    cout << "Starting CLIDaemon" << endl;
+    if (strcmp(argv[1], "-r") == 0 || strcmp(argv[1], "--run") == 0)
+    {
+        cout << "Starting CLIDaemon" << endl;
 
-    CLIDaemon dmn;
-    dmn.set_name("CLIDaemon"); // Название
-    dmn.set_update_duration(10ms); // Цикл каждые ... едениц времени (все равно спит ожидая сообщение)
-    dmn.set_cwd("/"); // Рабочая директория
-    dmn.run(argc, argv);
+        CLIDaemon dmn;
+        dmn.set_name("CLIDaemon"); // Название
+        dmn.set_update_duration(10ms); // Цикл каждые ... единиц времени (все равно спит ожидая сообщение)
+        dmn.set_cwd("/"); // Рабочая директория
+        dmn.run(argc, argv);
 
-    return EXIT_SUCCESS;
+        return EXIT_SUCCESS;
+    }
+    
+    cout << "Неверные аргументы" << endl;
+
+    return EXIT_FAILURE;
 }
