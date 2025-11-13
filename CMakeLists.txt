@@ -84,6 +84,10 @@ install(FILES ${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}.conf DESTINATION /etc/${PR
 # Install the systemd file .service
 install(FILES ${CMAKE_SOURCE_DIR}/bin/${PROJECT_NAME}.service DESTINATION /etc/systemd/system/)
 
+# Установка библиотек
+install(FILES ${CMAKE_SOURCE_DIR}/bin/libcomutils.a DESTINATION /usr/lib/)
+install(FILES ${CMAKE_SOURCE_DIR}/bin/libudp.a DESTINATION /usr/lib/)
+
 # Install the binary program
 install(TARGETS ${PROJECT_NAME} DESTINATION /usr/bin/)
 
