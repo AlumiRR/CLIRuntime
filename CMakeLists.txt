@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.11)
 project(cliruntime DESCRIPTION "Простой daemon для Linux, общающийся с клиентом по UDP" LANGUAGES CXX)
 
-set(PROJECT_VERSION "0.4.3")
+set(PROJECT_VERSION "0.5.0")
+
+enable_testing()
+
 
 # --- Для сборщика ---
 
@@ -22,16 +25,49 @@ configure_file(
 )
 
 include_directories(${CMAKE_SOURCE_DIR}/lib/daemonpp/)
-file(GLOB ALLHEADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp)
-file(GLOB ALLSOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-
-#file(GLOB ALLHEADERS ${CMAKE_CURRENT_SOURCE_DIR}/lib/daemonpp/*.hpp) # include_directories озадачивает линковщик
+#file(GLOB ALLHEADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp)
+#file(GLOB ALLSOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-add_executable(${PROJECT_NAME} ${ALLSOURCES} ${ALLHEADERS})
+# --- GTest ---
+
+include(FetchContent)
+
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG release-1.12.1  # Using a stable release tag
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/extern/googletest-src"
+  BINARY_DIR "${CMAKE_SOURCE_DIR}/extern/googletest-build"
+  CMAKE_ARGS 
+    -DCMAKE_BUILD_TYPE=Release
+    -DBUILD_GMOCK=OFF
+    -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${CMAKE_SOURCE_DIR}/extern/googletest-install/lib
+    -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=${CMAKE_SOURCE_DIR}/extern/googletest-install/lib
+)
+
+# Set this to OFF to avoid building tests for gtest itself
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(googletest)
+
+add_subdirectory(tests)
+
+add_library(udp 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/udp.cpp
+)
+
+add_library(comutils 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/command_utils.cpp
+)
+
+add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/defines.hpp)
+target_link_libraries(${PROJECT_NAME} udp comutils)
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 # --- Для установки сервиса ---

@@ -100,12 +100,14 @@ class CLIDaemon : public daemon // Линковщик жалуется если 
             }
 
         };
+        
         void on_stop() override
         {
             dlog::info("Terminating...");
             stop_periodic_task = true;
             atomic_task_ptr->join();
         };
+        
         void on_reload(const dconfig &cfg) override
         {
             dlog::info("my_daemon::on_reload(): new daemon version from updated config: " + cfg.get("version"));
@@ -210,7 +212,7 @@ int main(int argc, const char *argv[])
         }
     }
     
-    cliutils::remove_quotations(command_string);
+    cliutils::removeQuotations(command_string);
 
     // --- Обмен сообщениями между сервером и клиентом ---
 
